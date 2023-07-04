@@ -1,0 +1,38 @@
+version: '2'
+
+services:
+  kafka:
+    image: docker.io/bitnami/kafka:latest
+    container_name: kafka-server
+    networks:
+      - app-network
+    ports:
+      - '9092:9092'
+      - '9094:9094'
+    environment:
+      - ALLOW_PLAINTEXT_LISTENER=yes
+      - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093,EXTERNAL://:9094
+      - KAFKA_CFG_ADVERTISED_LISTENERS=PLAINTEXT://kafka:9092,EXTERNAL://localhost:9094
+      - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    healthcheck:
+      test:
+        [
+          'CMD-SHELL',
+          'kafka-topics.sh --list --bootstrap-server localhost:9092',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  app:
+    build: .
+    image: kafka-client
+    container_name: kafka-client
+    networks:
+      - app-network
+    depends_on:
+      kafka:
+        condition: service_healthy
+
+networks:
+  app-network:
+    driver: bridge
